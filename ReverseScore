@@ -1,0 +1,30 @@
+ReverseScore=function(x, Min=sapply(x, min, na.rm=T), Max=sapply(x, max, na.rm=T),  Subset=NULL){ #Leave Min and Max null. If you   did Min=sapply(x, min), Max=sapply(x, max) then you would get error (potentially) before x is converted.
+		x=as.data.frame(x)
+		if(is.null(Subset)==F)x=subset(x, , select=Subset)
+		rev.mat=matrix(,ncol=ncol(x), nrow=nrow(x))
+		if(length(Min) == 1 && ncol(x) >1)Min = rep(Min, ncol(x))#as long as it's on same line, don't need curly brackets. Only need brackets if going multiple lines.
+		#Note 2: for T/F arguments, double ampersand (&&). Generally, always double.
+		if(length(Max) == 1 && ncol(x) >1)Max = rep(Max, ncol(x))
+		else if(length(Min) != ncol(x) || length(Max) != ncol(x))stop("Min or Max must be length ncol(x), idiot!") ##OR is TWO pipes (||)
+		for(i in 1:ncol(x)){
+			if(Min[i]>Max[i])stop("Max must be greater than min!")
+		}
+		for(i in 1:ncol(x)){
+			if(Min[i]>0){
+				rev.mat[,i]=(Max[i]+1)-x[,i]
+			}else if(Min[i] == 0){
+				rev.mat[,i]=Max[i]-x[,i]
+			}else if(Min[i] <0){
+				rev.mat[,i] = -1*x[,i]
+			}
+		}
+		if(!is.null(colnames(x))){		
+			rev.names=vector(, length=length(colnames(x)))
+			for(i in 1:length(colnames(x))){
+			rev.names[i]=paste(colnames(x)[i], "Rev", sep=".")
+			}	
+			colnames(rev.mat)=rev.names	
+		}
+		output=rev.mat
+		output
+}
