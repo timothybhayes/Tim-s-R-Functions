@@ -1,0 +1,49 @@
+outmah.formula = function(formula, data, qval=pnorm(3),plotit=TRUE,xlab="VAR 1",ylab="VAR 2"){
+#
+#  detect outliers using Mahalanobis Distance
+#   For demonstration purposes only. Suggest
+#   using a method that avoids masking.
+#
+#  In univariate case, default strategy is to use 3 standard deviation rule
+#
+
+#----ADDED CODE STARTS HERE ---------------------------------------------------------#
+#Formula with Xs only, of the form '~X1+X2*X3' ... etc.
+
+cl <- match.call()
+mf <- match.call(expand.dots=FALSE)
+m <- match(c("formula", "data"), names(mf), 0L) #match only the relevant arguments
+mf <- mf[c(1L, m)]
+mf[[1L]] <- as.name("model.frame")
+mf <- eval(mf, parent.frame())
+mt <- attr(mf, "terms")
+#y <- model.response(mf, "numeric") #Extract y NO Y HERE.
+x <- model.matrix(mt, mf)
+x <- x[,-1] #Drop intercept vector of 1s
+#--END ADDED CODE-----------------------------------------------------------------------#
+
+
+x=elimna(x)
+x=as.matrix(x)
+m=apply(x,2,mean)
+v=cov(x)
+dis=mahalanobis(x,m,v)
+crit<-sqrt(qchisq(qval,ncol(x)))
+vec<-c(1:nrow(x))
+dis[is.na(dis)]=0
+dis<-sqrt(dis)
+chk<-ifelse(dis>crit,1,0)
+id<-vec[chk==1]
+keep<-vec[chk==0]
+if(is.matrix(x)){
+if(ncol(x)==2 && plotit){
+plot(x[,1],x[,2],xlab=xlab,ylab=ylab,type="n")
+flag<-rep(T,nrow(x))
+flag[id]<-F
+points(x[flag,1],x[flag,2])
+if(sum(!flag)>0)points(x[!flag,1],x[!flag,2],pch="*")
+}}
+if(!is.matrix(x))outval<-x[id]
+if(is.matrix(x))outval<-x[id,]
+list(call = cl, out.val=outval,out.id=id,keep=keep,dis=dis,crit=crit)
+}
