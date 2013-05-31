@@ -1,0 +1,84 @@
+regci.formula <- function(formula, data,regfun=tsreg,nboot=599,alpha=.05,SEED=TRUE,pr=TRUE,
+xout=FALSE,outfun=out,...){
+#
+#   Compute a .95 confidence interval for each of the parameters of
+#   a linear regression equation. The default regression method is
+#   the Theil-Sen estimator.
+#
+#   When using the least squares estimator, and when n<250, use
+#   lsfitci instead.
+#
+#   The predictor values are assumed to be in the n by p matrix x.
+#   The default number of bootstrap samples is nboot=599
+#
+#   regfun can be any R function that returns the coefficients in
+#   the vector regfun$coef, the first element of which contains the
+#   estimated intercept, the second element contains the estimated of
+#   the first predictor, etc.
+#
+
+
+#----ADDED CODE STARTS HERE ---------------------------------------------------------#
+cl <- match.call()
+mf <- match.call(expand.dots=FALSE)
+m <- match(c("formula", "data"), names(mf), 0L) #match only the relevant arguments
+mf <- mf[c(1L, m)]
+mf[[1L]] <- as.name("model.frame")
+mf <- eval(mf, parent.frame())
+mt <- attr(mf, "terms")
+y <- model.response(mf, "numeric") #Extract y
+x <- model.matrix(mt, mf)
+xnames=colnames(x)[-1] #In case there is only one x var, putting this up here.
+x <- x[,-1] #Drop intercept vector of 1s
+#--END ADDED CODE-----------------------------------------------------------------------#
+x<-as.matrix(x)
+p1<-ncol(x)+1
+p<-ncol(x)
+xy<-cbind(x,y)
+xy<-elimna(xy)
+x<-xy[,1:p]
+y<-xy[,p1]
+if(xout){
+m<-cbind(x,y)
+flag<-outfun(x,plotit=FALSE,...)$keep
+m<-m[flag,]
+x<-m[,1:p]
+y<-m[,p1]
+}
+nv=length(y)
+x<-as.matrix(x)
+if(SEED)set.seed(2) # set seed of random number generator so that
+#             results can be duplicated.
+if(pr)print("Taking bootstrap samples. Please wait.")
+data<-matrix(sample(length(y),size=length(y)*nboot,replace=TRUE),nrow=nboot)
+bvec<-apply(data,1,regboot,x,y,regfun,...)
+# bvec is a p+1 by nboot matrix. The first row
+#                     contains the bootstrap intercepts, the second row
+#                     contains the bootstrap values for first predictor, etc.
+regci<-matrix(0,p1,5)
+
+#-------------------------ADDED CODE STARTS HERE-----------------------------#
+vlabs=c("Intercept", xnames)
+#-------------------------ADDED CODE ENDS HERE-------------------------------#
+
+dimnames(regci)<-list(vlabs,c("ci.low","ci.up","Estimate","S.E.","p-value"))
+ilow<-round((alpha/2) * nboot)
+ihi<-nboot - ilow
+ilow<-ilow+1
+se<-NA
+pvec<-NA
+for(i in 1:p1){
+bsort<-sort(bvec[i,])
+pvec[i]<-(sum(bvec[i,]<0)+.5*sum(bvec[i,]==0))/nboot
+if(pvec[i]>.5)pvec[i]<-1-pvec[i]
+regci[i,1]<-bsort[ilow]
+regci[i,2]<-bsort[ihi]
+se[i]<-sqrt(var(bvec[i,]))
+}
+estit=regfun(x,y)$coef
+regci[,3]=estit
+pvec<-2*pvec
+regci[,4]=se
+regci[,5]=pvec
+list(call = cl, regci=regci,n=nv)
+}
