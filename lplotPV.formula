@@ -1,0 +1,58 @@
+lplotPV.formula = function(formula, data, span = 0.75, xout = FALSE,pr=TRUE,
+    outfun = out,nboot=1000,SEED=TRUE,plotit=TRUE,pyhat = FALSE, expand = 0.5, low.span = 2/3,
+    varfun = pbvar, cor.op = FALSE, cor.fun = pbcor, scale = FALSE,
+    xlab = "X", ylab = "Y", zlab = "", theta = 50, phi = 25,
+    family = "gaussian", duplicate = "error", pc = "*", ticktype = "simple",...){
+#
+# Compute a p-value based on the Strength of Association estimated via lplot
+# If significant, conclude there is dependence.
+#
+
+#----ADDED CODE STARTS HERE ---------------------------------------------------------#
+cl <- match.call()
+mf <- match.call(expand.dots=FALSE)
+m <- match(c("formula", "data"), names(mf), 0L) #match only the relevant arguments
+mf <- mf[c(1L, m)]
+mf[[1L]] <- as.name("model.frame")
+mf <- eval(mf, parent.frame())
+mt <- attr(mf, "terms")
+y <- model.response(mf, "numeric") #Extract y
+x <- model.matrix(mt, mf)
+x <- x[,-1] #Drop intercept vector of 1s
+if(!is.null(colnames(x))) xnames=colnames(x)
+#--END ADDED CODE-----------------------------------------------------------------------#
+
+
+if(SEED)set.seed(2)
+x=as.matrix(x)
+if(ncol(x)==2 && !scale){
+if(pr){
+print("scale=F is specified.")
+print("If there is dependence, might use scale=T")
+}}
+vals=NA
+nv=ncol(x)
+m=elimna(cbind(x,y))
+x<-m[,1:nv]
+y<-m[,nv+1]
+if(xout){
+flag<-outfun(x,plotit=FALSE,...)$keep
+m<-m[flag,]
+x<-m[,1:nv]
+y<-m[,nv+1]
+}
+x=as.matrix(x)
+est=lplot(x,y,span=span,plotit=plotit,pr=FALSE, pyhat = pyhat,
+    outfun = outfun, expand = expand, low.span = low.span,
+    varfun = varfun, cor.op =cor.op, cor.fun = cor.fun, scale = scale,
+    xlab = xlab, ylab = ylab, zlab =zlab, theta =theta, phi = phi,
+    family = family, duplicate = duplicate, pc = pc, ticktype = ticktype,...)
+n=nrow(x)
+data1<-matrix(sample(n,size=n*nboot,replace=TRUE),nrow=nboot)
+data2<-matrix(sample(n,size=n*nboot,replace=TRUE),nrow=nboot)
+for(i in 1:nboot){
+vals[i]=lplot(x[data1[i,],],y[data2[i,]],plotit=FALSE,pr=FALSE)$Strength.Assoc
+}
+p=mean(est$Strength<vals)
+list(call = cl, p.value=p,Strength.Assoc=est$Strength.Assoc,Explanatory.power=est$Explanatory.power,yhat.values=est$yhat.values)
+}
