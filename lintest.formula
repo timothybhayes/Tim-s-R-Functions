@@ -1,0 +1,61 @@
+lintest.formula = function(formula, data, regfun=tsreg,nboot=500,alpha=.05,xout=FALSE,SEED=TRUE,
+outfun=out,...){
+#
+# Test the hypothesis that the regression surface is a plane.
+# Stute et al. (1998, JASA, 93, 141-149).
+#
+
+#----ADDED CODE STARTS HERE ---------------------------------------------------------#
+cl <- match.call()
+mf <- match.call(expand.dots=FALSE)
+m <- match(c("formula", "data"), names(mf), 0L) #match only the relevant arguments
+mf <- mf[c(1L, m)]
+mf[[1L]] <- as.name("model.frame")
+mf <- eval(mf, parent.frame())
+mt <- attr(mf, "terms")
+y <- model.response(mf, "numeric") #Extract y
+x <- model.matrix(mt, mf)
+#xnames=colnames(x)[-1] #In case there is only one x var, putting this up here.
+x <- x[,-1] #Drop intercept vector of 1s
+#--END ADDED CODE-----------------------------------------------------------------------#
+
+if(SEED)set.seed(2)
+x<-as.matrix(x)
+d<-ncol(x)
+temp<-elimna(cbind(x,y))
+x<-temp[,1:d]
+x<-as.matrix(x)
+y<-temp[,d+1]
+if(xout){
+flag<-outfun(x,...)$keep
+x<-x[flag,]
+x<-as.matrix(x)
+y<-y[flag]
+}
+mflag<-matrix(NA,nrow=length(y),ncol=length(y))
+for (j in 1:length(y)){
+for (k in 1:length(y)){
+mflag[j,k]<-(sum(x[j,]<=x[k,])==ncol(x))
+}
+}
+reg<-regfun(x,y,...)
+yhat<-y-reg$residuals
+print("Taking bootstrap sample, please wait.")
+data<-matrix(runif(length(y)*nboot),nrow=nboot)
+data<-sqrt(12)*(data-.5) # standardize the random numbers.
+rvalb<-apply(data,1,lintests1,yhat,reg$residuals,mflag,x,regfun,...)
+# An n x nboot matrix of R values
+rvalb<-rvalb/sqrt(length(y))
+dstatb<-apply(abs(rvalb),2,max)
+wstatb<-apply(rvalb^2,2,mean)
+# compute test statistic
+v<-c(rep(1,length(y)))
+rval<-lintests1(v,yhat,reg$residuals,mflag,x,regfun,...)
+rval<-rval/sqrt(length(y))
+dstat<-max(abs(rval))
+wstat<-mean(rval^2)
+ib<-round(nboot*(1-alpha))
+p.value.d<-1-sum(dstat>=dstatb)/nboot
+p.value.w<-1-sum(wstat>=wstatb)/nboot
+list(call = cl, dstat=dstat,wstat=wstat,p.value.d=p.value.d,p.value.w=p.value.w)
+}
