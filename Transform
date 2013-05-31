@@ -1,0 +1,30 @@
+Transform=function(x, type=3, na.rm=T){
+###Transform Variables Using Common Transformations From Tabachnik and Fidell (2001)
+  require(psych)
+	x=as.matrix(x) #note: this has to be as.matrix, not matrix
+	
+	Skew=psych::skew(x, na.rm=na.rm, type=type) #psych::skew to differentiate from Rand's skew() function, in case rallfun is sourced
+	##Check for direction of skewness and reflect as necessary
+	refX=matrix(,nrow=nrow(x), ncol=ncol(x))#reflect x
+	
+	for(i in 1:ncol(x)){
+		if(min(x[,i], na.rm=T)<1)refX[,i]=x[,i]+abs(1-min(x[,i], na.rm=T))else refX[,i]=x[,i] 
+		#note: don't forget na.rm=T after min(x[,i])
+		if(Skew[i]<0)refX[,i]=(max(refX[,i], na.rm=T)+1)-refX[,i]else refX[,i]=refX[,i]
+	}
+	
+	sqrtTransform=apply(refX, 2, sqrt)
+	logTransform=apply(refX, 2, log10)
+	invTransform=apply(refX, 2, function(x) 1/x)
+	
+	#Rename as necessary
+	if(!is.null(colnames(x))){
+	colnames(sqrtTransform)=paste(colnames(x), "sqrt", sep=".")
+	colnames(logTransform)=paste(colnames(x), "Log", sep=".")
+	colnames(invTransform)=paste(colnames(x), "Inv", sep=".")
+	}
+	
+	output=list(SquareRoot=sqrtTransform, Log=logTransform, Inverse=invTransform)
+	print(names(output))
+	invisible(output)
+}
