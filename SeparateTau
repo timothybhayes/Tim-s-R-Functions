@@ -1,0 +1,58 @@
+SeparateTau=function(es, Var, Groups){
+
+#Function to compute Random Effects meta-analysis with separate estimates of Tau^2 for each subgroup
+#Based on meta-analysis I am conducting using Standardized Mean Differences. Adjustments may need to be made for other ES measures (though likely not many).
+#es = Hedge's g
+#Var = fixed-effect estimate of the Vg, the variance of Hedge's g.
+#Groups = single factor variable denoting subgroups.
+
+require(metafor)
+
+data=data.frame(cbind(es, Var)) #First two are numeric
+data$Groups=Groups #this should retain the factor
+colnames(data) = c("es", "Var", "Groups") #just in case
+
+#Obtain Separate Tau Estimates
+tauvec= vector(, length=length(unique(Groups)))
+for(i in 1:length(unique(Groups)))tauvec[i] = rma(es, Var, subset=(Groups==unique(Groups)[i]), data=data, method="DL")$tau2
+tauvec
+
+
+TauByGroup=vector(,length=nrow(data))
+
+for(j in 1:length(unique(Groups))){
+  TauByGroup[data$Groups == unique(data$Groups)[j]] = tauvec[j]
+}
+
+varVec=data$Var+TauByGroup
+
+data$Taus=TauByGroup
+data$totalvar=varVec
+data$WT.Separate=1/data$totalvar
+
+Fit1=rma(es, weights=WT.Separate, mods=~factor(Groups)-1, data=data, method="FE")
+Fit2=rma(es, weights=WT.Separate, mods=~factor(Groups), data=data, method="FE")
+
+
+Qb=Fit2$QM
+Qw=Fit2$QE
+Qt=Qb+Qw
+df.b=length(unique(data$Groups))-1
+df.w=nrow(data)-length(unique(data$Groups))
+df.t=df.b+df.w
+p.between=round(Fit2$QMp, 4)
+p.within=round(Fit2$QEp, 4)
+
+Qs=c(round(Qb, 4), round(Qw, 4), round(Qt, 4))
+dfs=c(df.b, df.w, df.t)
+ps=c(p.between, p.within, NA)
+
+Qtable=cbind(Qs, dfs, ps)
+colnames(Qtable)=c("Q", "df", "p")
+rownames(Qtable)=c("Between", "Within", "Total")
+
+PrintList=list(Qtable=Qtable, Results=Fit1)
+Output=list(Qtable=Qtable, Results=Fit1, newdata=data)
+print(PrintList)
+invisible(Output)
+	}
