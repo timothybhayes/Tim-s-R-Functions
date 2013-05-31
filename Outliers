@@ -1,0 +1,14 @@
+
+Outliers=function(x, cutoff=3.29, Subset=NULL){
+  x=as.data.frame(x)
+	data=x			
+	if(!is.null(Subset))x=subset(x, , select=Subset)
+	xrm=apply(x, 2, function(x) ifelse(abs(scale(x))>cutoff, NA, x))
+	if(!is.null(colnames(x))) colnames(xrm) = paste(colnames(x), "Rm", sep=".")
+	xflag=apply(xrm, 2, function(x) which(is.na(x)))
+	xnew=as.data.frame(cbind(data,xrm))
+	printlist=list(Flagged=xflag, Remove=xrm)
+	output=list(data=xnew, Flagged=xflag, Remove=xrm)
+	print(printlist)
+	invisible(output)	
+}
