@@ -1,0 +1,21 @@
+trimvec=function(x, tr=.2){
+#Trimming:
+#g = [amt_trimming*n]
+  #20% trim: g = [.2*n]
+
+#2g total is amount of trimming on both sides.
+
+#n-2g is sample size after trimming.(NOTE: sometimes this is h in problems)
+
+#g+1 is position of lowest value. 
+#n-g is position of highest value.
+
+	if(!is.vector(x) && !is.numeric(x))stop("X must be a numeric vector.")
+	n=length(x)
+	tr=tr
+	g=floor(tr*n)
+	lo=g+1
+	hi=n-g
+	x=sort(x)[lo:hi]
+	return(x)
+}
