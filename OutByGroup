@@ -1,0 +1,90 @@
+OutByGroup=function(x, groups=NULL, cutoff=3.29, Subset=NULL){
+#Variables you request in Subset argument SHOULD NOT include the grouping variables. Only include variables among which you want to detect outliers.
+#Note to self: Otherwise you'd have to write code to test if they included grouping vars in Subset.
+#NOTE: we are proceeding as if what is entered is only the NAMES of the grouping variables, not a matrix or data frame  consisting of them.
+
+  x=as.data.frame(x)			
+	data=x ###NEW
+
+#x is FULL dataset at outset
+#data is FULL dataset for re-assembly
+#subset = DVs (outlier RM vars)
+#groups = grouping var(s)
+	
+	if(length(groups[-na.omit(match(groups, Subset))])!=0)stop("Grouping variable must not be included in Subset!")
+	if(is.null(Subset)==F){
+		if(!is.null(groups)){
+			x=subset(x, , select=c(groups, Subset))#This works b/c x is now full dataset
+		}
+		}else{
+			x=data.frame(cbind(x[,groups], x[,-which(colnames(x)==groups)]))
+			colnames(x)[1:length(groups)]=groups #otherwise cbind renames.
+		}
+	
+	x$int=interaction(x[,groups])	
+	uni=unique(x$int)	
+
+		
+	OutRM = x
+	IDMat = x
+	ZMat = matrix(,nrow=nrow(x), ncol=ncol(x))
+	colnames(ZMat)=colnames(x)
+
+	###NOTE TO SELF: THIS VERSION WORKS BECAUSE OutRM = x -> that is, it has all elements of x already. Therefore, you don't need extra code to enter values for groups with 1-2 cases in OutRM.
+		
+for (i in 1:length(uni)){ 
+	for (j in (length(groups)+1):(ncol(x)-1)){ #Note: Length groups+1 to start on first columns after groups.
+		if(length(x[x$int==uni[i],j])>=2){ #NOTE: consider changing cutoff to reflect conceptual standards.
+		OutRM[which(x$int==uni[i]),j] = ifelse(abs(scale(x[x$int==uni[i],j])) > cutoff, NA, x[x$int==uni[i],j])
+		IDMat[which(x$int==uni[i]),j] = ifelse(abs(scale(x[x$int==uni[i],j])) > cutoff, 1, 0)
+		ZMat[which(x$int==uni[i]),j] = abs(scale(x[x$int==uni[i],j]))
+
+}
+}
+}
+
+OutRM=OutRM[,-ncol(OutRM)]
+colnames(OutRM)[(length(groups)+1):ncol(OutRM)]= paste(colnames(OutRM)[(length(groups)+1):ncol(OutRM)],"RM",sep=".")#OutRM has x colnames
+
+IDMat=IDMat[,(length(groups)+1):(ncol(IDMat)-1)]
+ZMat=ZMat[,(length(groups)+1):(ncol(ZMat)-1)]
+
+#Convert to data frames in cases number of vars = 1
+
+IDMat=as.data.frame(IDMat)
+ZMat=as.data.frame(ZMat)
+
+ID=1:nrow(x)
+
+OutID=list()
+length(OutID)=(ncol(x)-1)-length(groups)
+names(OutID)=colnames(x[,(length(groups)+1):(ncol(x)-1)])
+
+for(i in 1:ncol(IDMat)){
+	OutID[[i]]=ID[which(IDMat[,i]==1)]
+}
+
+
+ZID=vector(length=length(OutID), mode="list")
+names(ZID)=names(OutID)
+
+for(i in 1:length(OutID)){
+	ZID[[i]]=ZMat[,i][OutID[[i]]]
+}
+
+AddVars=OutRM[,(length(groups)+1):ncol(OutRM)]
+AddVars=as.data.frame(AddVars)
+FullData=data.frame(cbind(data, AddVars)) #Add back to original data.
+
+#Deal With Variable Names for Single Variable Case
+if(ncol(AddVars)==1){
+	colnames(FullData)[which(colnames(FullData)=="AddVars")]=colnames(OutRM)[(length(groups)+1):ncol(OutRM)]
+	colnames(AddVars)=colnames(OutRM)[(length(groups)+1):ncol(OutRM)]
+	names(ZID)=colnames(OutRM)[(length(groups)+1):ncol(OutRM)]
+	names(OutID)=colnames(OutRM)[(length(groups)+1):ncol(OutRM)]
+	}
+PrintList=list(Out.ID=OutID, Out.RM=AddVars)
+Output=list(Out.ID=OutID, Z.ID=ZID, Out.RM=AddVars, FullData=FullData)
+print(PrintList)
+invisible(Output)
+}
