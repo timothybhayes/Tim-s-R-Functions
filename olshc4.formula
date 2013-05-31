@@ -1,0 +1,74 @@
+olshc4.formula=function(formula, data, alpha=.05,CN=FALSE,xout=FALSE,outfun=out,...){
+#
+# Compute confidence for least squares
+# regression using heteroscedastic method
+# recommended by Cribari-Neto (2004).
+# CN=F, degrees of freedom are n-p
+# CN=T  degrees of freedom are infinite, as done by Cribari-Neto (2004)
+# All indications are that CN=F is best for general use.
+#
+
+#----ADDED CODE STARTS HERE ---------------------------------------------------------#
+cl <- match.call()
+mf <- match.call(expand.dots=FALSE)
+m <- match(c("formula", "data"), names(mf), 0L) #match only the relevant arguments
+mf <- mf[c(1L, m)]
+mf[[1L]] <- as.name("model.frame")
+mf <- eval(mf, parent.frame())
+mt <- attr(mf, "terms")
+y <- model.response(mf, "numeric") #Extract y
+x <- model.matrix(mt, mf)
+xnames=colnames(x)[-1] #In case there is only one x var, putting this up here.
+x <- x[,-1] #Drop intercept vector of 1s
+#--END ADDED CODE-----------------------------------------------------------------------#
+
+x<-as.matrix(x)
+if(nrow(x) != length(y))stop("Length of y does not match number of x values")
+m<-cbind(x,y)
+m<-elimna(m)
+y<-m[,ncol(x)+1]
+x=m[,1:ncol(x)]
+x<-as.matrix(x)
+if(xout){
+flag<-outfun(x,...)$keep
+x<-as.matrix(x)
+x<-x[flag,]
+y<-y[flag]
+x<-as.matrix(x)
+}
+temp<-lsfit(x,y)
+#x<-cbind(rep(1,nrow(x)),m[,1:ncol(x)])
+x<-cbind(rep(1,nrow(x)),x)
+xtx<-solve(t(x)%*%x)
+h<-diag(x%*%xtx%*%t(x))
+n<-length(h)
+d<-(n*h)/sum(h)
+for(i in 1:length(d)){
+        d[i]<-min(4, d[i])
+}
+hc4<-xtx%*%t(x)%*%diag(temp$res^2/(1-h)^d)%*%x%*%xtx
+df<-nrow(x)-ncol(x)
+crit<-qt(1-alpha/2,df)
+if(CN)crit=qnorm(1-alpha/2)
+al<-ncol(x)
+p=al-1
+ci<-matrix(NA,nrow=al,ncol=6)
+
+#----ADDED CODE STARTS HERE ---------------------------------------------------------#
+lab.out=xnames
+#--END ADDED CODE--------------------------------------------------------------------#
+
+dimnames(ci)<-list(c("(Intercept)",lab.out),c("Coef.","Estimates",
+"ci.lower","ci.upper","p-value","Std.Error"))
+for(j in 1:al){
+ci[j,1]<-j-1
+ci[j,2]<-temp$coef[j]
+ci[j,3]<-temp$coef[j]-crit*sqrt(hc4[j,j])
+ci[j,4]<-temp$coef[j]+crit*sqrt(hc4[j,j])
+test<-temp$coef[j]/sqrt(hc4[j,j])
+ci[j,5]<-2*(1-pt(abs(test),df))
+if(CN)ci[j,5]<-2*(1-pnorm(abs(test),df))
+}
+ci[,6]=sqrt(diag(hc4))
+list(call=cl, n=length(y),ci=ci, cov=hc4)
+}
