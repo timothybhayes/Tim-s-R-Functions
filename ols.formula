@@ -1,0 +1,102 @@
+ols.formula=function(formula, data, xout=FALSE,outfun=out,plotit=TRUE,...){
+#
+# Performs OLS regression calling built-in R or S+ funtions.
+#
+# xout=T will eliminate any leverage points (outliers among x values)
+# if one predictor,
+# plotit=TRUE will plot the points and the regression line
+#
+
+#----ADDED CODE STARTS HERE ---------------------------------------------------------#
+cl <- match.call()
+mf <- match.call(expand.dots=FALSE)
+m <- match(c("formula", "data"), names(mf), 0L) #match only the relevant arguments
+d<-match(c("data"), names(mf), 0L)# Is there a data argument (separate check for later).
+dc <- ifelse(d == 0, FALSE, TRUE)
+mf <- mf[c(1L, m)]
+mf[[1L]] <- as.name("model.frame")
+mf <- eval(mf, parent.frame())
+mt <- attr(mf, "terms")
+y <- model.response(mf, "numeric") #Extract y
+x <- model.matrix(mt, mf)
+xnames=colnames(x)[-1] #In case there is only one x var, putting this up here.
+x <- x[,-1] #Drop intercept vector of 1s
+#--END ADDED CODE-----------------------------------------------------------------------#
+
+mat<-elimna(cbind(x,y)) #elimna makes x a matrix, which means lm will not work on it with a formula method.
+
+#----ADDED CODE STARTS HERE ------------------------------------------------------------#
+mat<-as.data.frame(mat)
+#--END ADDED CODE-----------------------------------------------------------------------#
+
+n=nrow(mat)
+x<-as.matrix(x)
+p<-ncol(x)
+pp<-p+1
+x<-mat[,1:p]
+y<-mat[,pp]
+
+#----ADDED CODE STARTS HERE ------------------------------------------------------------#
+colnames(mat)[1:p]=xnames; colnames(mat)[pp] = colnames(mf)[1]
+#--END ADDED CODE-----------------------------------------------------------------------#
+
+if(xout){
+mat<-data.frame(cbind(x,y))
+flag<-outfun(x,plotit=FALSE,...)$keep
+mat<-mat[flag,]
+x<-mat[,1:p]
+y<-mat[,pp]
+}
+x<-as.matrix(x)
+
+#----ADDED CODE STARTS HERE ------------------------------------------------------------#
+
+if(dc == TRUE){
+  form=paste(colnames(mat)[pp], "~", paste(colnames(mat)[1:p], collapse="+"), sep="")
+	tempfit<-lm(as.formula(form), data = mat)
+}else{
+	form=y~x
+	tempfit<-lm(as.formula(form))
+}
+		
+temp<-summary(tempfit)
+#--END ADDED CODE-----------------------------------------------------------------------#
+
+coef<-temp[4]$coefficients
+
+#----ADDED CODE STARTS HERE ------------------------------------------------------------#
+if(p==1){
+	if(plotit){
+		quartz()#comment out and change to windows() for PC
+		#windows()
+		plot(x,y)
+		abline(coef[,1])
+		quartz() #comment out and change to windows() for PC
+		#windows()
+		par(mfrow=c(2,2))
+		plot(tempfit)
+		}else{
+			quartz()#comment out and change to windows() for PC
+			#windows()
+			par(mfrow=c(2,2))
+			plot(tempfit)
+			}
+}else{ 
+	quartz() #comment out and change to windows() for PC
+	#windows()
+	par(mfrow=c(2,2))
+	plot(tempfit)}
+	
+#--END ADDED CODE-----------------------------------------------------------------------#
+
+
+Ftest<-temp[10]$fstatistic
+Ftest.p.value<-1-pf(Ftest[1],Ftest[2],Ftest[3])
+Rval=Rsq(x,y)
+
+printlist=list(call=cl, n=n,coef=coef,Ftest.p.value=Ftest.p.value,R.squared=Rval)
+returnlist=list(call=cl, n=n,coef=coef,Ftest.p.value=Ftest.p.value,R.squared=Rval, fit=tempfit)
+print(printlist)
+invisible(returnlist)
+}
+
