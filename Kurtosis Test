@@ -1,0 +1,20 @@
+kurtosisTest=function(x, na.rm=T, type=3){
+  require(psych)
+	x=as.matrix(x) #note: this has to be as.matrix, not matrix
+	kurt=kurtosi(x, na.rm=na.rm, type=type)
+	kurtSE=vector(,length=ncol(x))
+	for(i in 1:ncol(x)){
+		kurtSE[i]=sqrt(24/length(x[,i]))
+	}
+	zstat=kurt/kurtSE
+	p.vals=2*pnorm(-abs(zstat))
+	sig=ifelse(p.vals < .001, "**", ifelse(p.vals<.01, "*", "")) #Note: .01 precedes .001 in ifelse() logic. Otherwise, function will just give everything <.01 a "*" if you reverse these.	
+		results=data.frame(cbind(round(kurt,3), round(kurtSE,3), round(zstat,3), round(p.vals,3), sig), stringsAsFactors=F)#don't convert to factors
+	colnames(results)=c("Kurtosis", "SE.Kurtosis", "Z.Kurtosis", "pval", "") #Final name blank b/c significance column
+	if(!is.null(colnames(x)))rownames(results)=colnames(x)
+	for(i in 1:(ncol(results)-1))results[,i]=as.numeric(results[,i]) #otherwise, results treated as factors
+	message="Approximate SE Kurtosis calculated using sqrt(24/N). Evaluate at .01 or .001 level of significance (cf. Tabachnick & Fidell, 2001)."
+	legend=paste("* = .01", "**=.001", sep=" ")
+	output=list(Message=message, Results=results, Legend=legend)
+	output
+}
