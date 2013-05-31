@@ -1,0 +1,85 @@
+tsreg.formula=function(formula, data, xout=FALSE,outfun=out,iter=10,varfun=pbvar,
+corfun=pbcor,plotit=FALSE,WARN=TRUE,...){
+#
+#  Compute Theil-Sen regression estimator
+#
+#  Use Gauss-Seidel algorithm
+#  when there is more than one predictor
+#
+#
+
+#----ADDED CODE STARTS HERE ---------------------------------------------------------#
+cl <- match.call()
+mf <- match.call(expand.dots=FALSE)
+m <- match(c("formula", "data"), names(mf), 0L) #match only the relevant arguments
+mf <- mf[c(1L, m)]
+mf[[1L]] <- as.name("model.frame")
+mf <- eval(mf, parent.frame())
+mt <- attr(mf, "terms")
+y <- model.response(mf, "numeric") #Extract y
+x <- model.matrix(mt, mf)
+xnames=colnames(x)[-1] #In case there is only one x var, putting this up here.
+x <- x[,-1] #Drop intercept vector of 1s
+#--END ADDED CODE-----------------------------------------------------------------------#
+
+x<-as.matrix(x)
+xx<-cbind(x,y)
+xx<-elimna(xx)
+x<-xx[,1:ncol(x)]
+x<-as.matrix(x)
+y<-xx[,ncol(x)+1]
+temp<-NA
+x<-as.matrix(x)
+if(xout){
+x<-as.matrix(x)
+flag<-outfun(x,plotit=plotit,...)$keep
+x<-x[flag,]
+y<-y[flag]
+x<-as.matrix(x)
+}
+if(ncol(x)==1){
+temp1<-tsp1reg(x,y)
+coef<-temp1$coef
+coef<-t(as.matrix(coef))
+colnames(coef) = c("(Intercept)", xnames)
+rownames(coef) = "Estimates"
+res<-temp1$res
+}
+if(ncol(x)>1){
+for(p in 1:ncol(x)){
+temp[p]<-tsp1reg(x[,p],y)$coef[2]
+}
+res<-y-x%*%temp
+alpha<-median(res)
+r<-matrix(NA,ncol=ncol(x),nrow=nrow(x))
+tempold<-temp
+for(it in 1:iter){
+for(p in 1:ncol(x)){
+r[,p]<-y-x%*%temp-alpha+temp[p]*x[,p]
+temp[p]<-tsp1reg(x[,p],r[,p],plotit=FALSE)$coef[2]
+}
+alpha<-median(y-x%*%temp)
+tempold<-temp
+}
+coef<-c(alpha,temp)
+coef<-t(as.matrix(coef))
+colnames(coef) = c("(Intercept)", xnames)
+rownames(coef) = "Estimates"
+res<-y-x%*%temp-alpha
+}
+yhat<-y-res
+stre=NULL
+temp=varfun(y)
+if(temp==0){
+if(WARN)print("Warning: When computing strength of association, measure of variation=0")
+}
+e.pow=NULL
+if(temp>0){
+e.pow<-varfun(yhat)/varfun(y)
+if(!is.na(e.pow)){
+if(e.pow>=1)e.pow<-corfun(yhat,y)$cor^2
+e.pow=as.numeric(e.pow)
+stre=sqrt(e.pow)
+}}
+list(call = cl, coef=coef,residuals=res,Strength.Assoc=stre,Explanatory.Power=e.pow)
+}
