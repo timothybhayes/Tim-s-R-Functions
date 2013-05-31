@@ -1,0 +1,20 @@
+skewTest=function(x, na.rm=T, type=3){
+  require(psych)
+	x=as.matrix(x) #note: this has to be as.matrix, not matrix
+	Skew=psych::skew(x, na.rm=na.rm, type=type) #psych::skew to differentiate from Rand's skew() function, in case rallfun is sourced
+	SkewSE=vector(,length=ncol(x))
+	for(i in 1:ncol(x)){
+		SkewSE[i]=sqrt(6/length(x[,i]))
+	}
+	zstat=Skew/SkewSE
+	p.vals=2*pnorm(-abs(zstat))
+	sig=ifelse(p.vals < .001, "**", ifelse(p.vals<.01, "*", "")) #Note: .01 precedes .001 in ifelse() logic. Otherwise, function will just give everything <.01 a "*" if you reverse these.
+	results=data.frame(cbind(round(Skew,3), round(SkewSE,3), round(zstat,3), round(p.vals,3), sig), stringsAsFactors=F) #don't convert to factors
+	colnames(results)=c("Skew", "SE.Skew", "Z.Skew", "pval","") #Final col blank b/c significance column.
+	if(!is.null(colnames(x)))rownames(results)=colnames(x)
+	for(i in 1:(ncol(results)-1))results[,i]=as.numeric(results[,i]) #Otherwise, results treated as factors.
+	message="Approximate SE Skew calculated using sqrt(6/N). Evaluate at .01 or .001 level of significance (cf. Tabachnick & Fidell, 2001)."
+	legend=paste("* = .01", "**=.001", sep=" ")
+	output=list(Message=message, Results=results, Legend=legend)
+	output
+}
