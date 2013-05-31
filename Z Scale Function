@@ -1,32 +1,7 @@
 zscale=function(x){
-  #Z-score variables and rename them "Zvariable name"
-	 if(is.vector(x)){
-	 	if(is.list(x)){ #Note: lists are vectors! So, is.vector(listx) returns T
-	 		stop("x must be a vector, matrix, or data frame!")
-	 		}else if(!is.list(x)){
-		zvec=vector(,length=length(x))
-		for(i in 1:length(x)){
-			zvec[i]=(x[i]-mean(x, na.rm=T))/sd(x, na.rm=T)
-			}
-			output=zvec
-			}
-		}else if (is.matrix(x) | is.data.frame(x)){
-		
-			zmat=matrix(, ncol=ncol(x), nrow=nrow(x))
-			if(length(colnames(x))>0){
-				matnames=vector(,length=length(colnames(x)))
-				for(i in 1:length(colnames(x))){
-					matnames[i]=paste("Z", colnames(x)[i],sep="")
-					colnames(zmat)=matnames
-					}
-				}	
-				for(i in 1:ncol(x)){
-				zmat[,i]=(x[,i]-mean(x[,i], na.rm=T))/sd(x[,i], na.rm=T)
-				
-				}	
-				output=zmat 
-		}else{
-		stop("X must be a vector, matrix, or data frame!")
-	}
-output
+	if(is.list(x))stop("x must be a vector, matrix, or data frame!")
+	x=as.matrix(x)#as.matrix, NOT matrix here
+	x=apply(x, 2, function(x) x = (x-mean(x))/sd(x))
+	if(!is.null(colnames(x))) colnames(x) = paste("Z", colnames(x), sep="")
+	return(x)
 }
