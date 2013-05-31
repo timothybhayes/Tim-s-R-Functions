@@ -1,0 +1,135 @@
+lplot.formula = function(formula, data, span=.75,pyhat=FALSE,eout=FALSE,xout=FALSE,outfun=out,plotit=TRUE,
+expand=.5,low.span=2/3,varfun=pbvar,cor.op=FALSE,cor.fun=pbcor,pr=TRUE,
+scale=FALSE,xlab="X",ylab="Y",zlab="",theta=50,phi=25,family="gaussian",
+duplicate="error",pc="*",ticktype="simple",...){
+#
+# Plot regression surface using LOESS
+#
+# low.span is the span when lowess is used and there is one predictor
+# span is the span when loess is used with two or more predictors
+# pyhat=T will return Y hat values
+# eout=T will eliminate outliers
+# xout=T  will eliminate points where X is an outliers
+# family="gaussian"; see the description of the built-in function loess
+#
+# duplicate="error"
+# In some situations where duplicate values occur, when plotting with
+# two predictors, it is necessary to set duplicate="strip"
+#
+#library(modreg)
+
+#----ADDED CODE STARTS HERE ---------------------------------------------------------#
+cl <- match.call()
+mf <- match.call(expand.dots=FALSE)
+m <- match(c("formula", "data"), names(mf), 0L) #match only the relevant arguments
+mf <- mf[c(1L, m)]
+mf[[1L]] <- as.name("model.frame")
+mf <- eval(mf, parent.frame())
+mt <- attr(mf, "terms")
+y <- model.response(mf, "numeric") #Extract y
+x <- model.matrix(mt, mf)
+x <- x[,-1] #Drop intercept vector of 1s
+if(!is.null(colnames(x))) xnames=colnames(x)
+#--END ADDED CODE-----------------------------------------------------------------------#
+
+
+library(stats)
+x<-as.matrix(x)
+m<-elimna(cbind(x,y))
+n.orig=nrow(m)
+n.keep=n.orig
+if(!is.matrix(x))stop("x is not a matrix")
+d<-ncol(x)
+if(d>=2){
+library(akima)
+if(ncol(x)==2 && !scale){
+if(pr){
+print("scale=F is specified.")
+print("If there is dependence, might use scale=T")
+print("To get a p-value, based on the measure of the")
+print("strength of association based on this function,")
+print("use the function lplotPV")
+}}
+x<-m[,1:d]
+y<-m[,d+1]
+if(eout && xout)stop("Can't have both eout and xout = F")
+if(eout){
+flag<-outfun(m,plotit=FALSE,...)$keep
+m<-m[flag,]
+n.keep=nrow(m)
+}
+if(xout){
+flag<-outfun(x,plotit=FALSE,...)$keep
+m<-m[flag,]
+n.keep=nrow(m)
+}
+x<-m[,1:d]
+y<-m[,d+1]
+if(d==2)fitr<-fitted(loess(y~x[,1]*x[,2],span=span,family=family))
+if(d==3)fitr<-fitted(loess(y~x[,1]*x[,2]*x[,3],span=span,family=family))
+if(d==4)fitr<-fitted(loess(y~x[,1]*x[,2]*x[,3]*x[,4],span=span,family=family))
+if(d>4)stop("Can have at most four predictors")
+last<-fitr
+if(d==2 && plotit){
+iout<-c(1:length(fitr))
+nm1<-length(fitr)-1
+for(i in 1:nm1){
+ip1<-i+1
+for(k in ip1:length(fitr))if(sum(x[i,]==x[k,])==2)iout[k]<-0
+}
+fitr<-fitr[iout>=1] # Eliminate duplicate points in the x-y plane
+#                 This is necessary when doing three dimensional plots
+#                 with the R function interp
+mkeep<-x[iout>=1,]
+fitr<-interp(mkeep[,1],mkeep[,2],fitr,duplicate=duplicate)
+persp(fitr,theta=theta,phi=phi,xlab=xlab,ylab=ylab,zlab=zlab,expand=expand,
+scale=scale,ticktype=ticktype)
+}}
+if(d==1){
+m<-elimna(cbind(x,y))
+x<-m[,1:d]
+y<-m[,d+1]
+if(eout && xout)stop("Can't have both eout and xout = T")
+if(eout){
+flag<-outfun(m,plotit=FALSE,...)$keep
+m<-m[flag,]
+n.keep=nrow(m)
+}
+if(xout){
+flag<-outfun(x,plotit=FALSE,...)$keep
+m<-m[flag,]
+n.keep=nrow(m)
+}
+x<-m[,1:d]
+y<-m[,d+1]
+if(plotit){
+plot(x,y,xlab=xlab,ylab=ylab,pch=pc)
+lines(lowess(x,y,f=low.span))
+}
+tempxy<-lowess(x,y,f=low.span)
+yyy<-tempxy$y
+xxx<-tempxy$x
+last<-yyy
+chkit<-sum(duplicated(x))
+if(chkit>0){
+last<-rep(1,length(y))
+for(j in 1:length(yyy)){
+for(i in 1:length(y)){
+if(x[i]==xxx[j])last[i]<-yyy[j]
+}}
+}
+}
+E.power<-1
+if(!cor.op)E.power<-varfun(last[!is.na(last)])/varfun(y)
+if(cor.op || E.power>=1){
+if(d==1){
+xord<-order(x)
+E.power<-cor.fun(last,y[xord])$cor^2
+}
+if(d>1)E.power<-cor.fun(last,y)$cor^2
+}
+E.power=as.numeric(E.power)
+if(!pyhat)last <- NULL
+list(call = cl, Strength.Assoc=sqrt(E.power),Explanatory.power=E.power,yhat.values=last,n=n.orig,
+n.keep=n.keep)
+}
