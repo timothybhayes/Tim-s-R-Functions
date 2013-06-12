@@ -1,0 +1,16 @@
+bcoef=function(formula, data){
+cl <- match.call()
+mf <- match.call(expand.dots=FALSE)
+m <- match(c("formula", "data"), names(mf), 0L) #match only the relevant arguments
+mf <- mf[c(1L, m)]
+mf[[1L]] <- as.name("model.frame")
+mf <- eval(mf, parent.frame())
+mt <- attr(mf, "terms")
+y <- model.response(mf, "numeric") #Extract y
+x <- model.matrix(mt, mf)
+#xnames=colnames(x)
+coefficients=solve(t(x)%*%x)%*%(t(x)%*%y)
+coefficients=t(coefficients)
+rownames(coefficients)="coefficients"
+return(coefficients)
+}
