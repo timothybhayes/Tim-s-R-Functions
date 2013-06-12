@@ -1,4 +1,4 @@
-bcoef=function(formula, data){
+bcoef.formula=function(formula, data){
 cl <- match.call()
 mf <- match.call(expand.dots=FALSE)
 m <- match(c("formula", "data"), names(mf), 0L) #match only the relevant arguments
