@@ -1,0 +1,67 @@
+IndirectBoot.Revised1 = function(iv, m, dv, data, nboot=500, alpha=.05){
+  #Function for computing bootstrap estimates of indirect effect for simple mediation
+	#This function assumes that each variable name is entered as a name in quotes.
+	#so, if your iv name is "x" then "x" goes in the iv slot.
+	
+	#iv = iv
+	#m = mediator
+	#dv = dv
+	#data = dataset that contains iv, m, and dv names
+	#nboot = number of bootstrap samples
+	#alpha = alpha level
+	
+	#This version begins to optimize the bootstraps.
+	
+	set.seed(06112013)
+	
+	x=data[,c(iv, m, dv)]
+	
+	x=apply(data, 2, scale) #z-score center variables
+	
+	B = nboot
+	
+	nr=nrow(x)
+	
+	
+#	indirects=vector(length=B)
+#	for(i in 1:B){
+#		s=apply(x, 2, function(x) sample(x, nr, T)) #sample
+#		a=coef(lm(s[,m]~s[,iv]))[2]
+#		b=coef(lm(s[,dv]~s[,m]))[2]
+#		indirects[i]=a*b
+#		
+#	}
+	
+	
+	Biv=data.frame(matrix(sample(x[,iv], nr*B, T), nrow=nr, ncol=B))
+	Bm=data.frame(matrix(sample(x[,m], nr*B, T), nrow=nr, ncol=B))
+	Bdv=data.frame(matrix(sample(x[,dv], nr*B, T), nrow=nr, ncol=B))
+	
+	indirects=mapply(function(IV, M, DV) coef(lm(M~IV))[2]*coef(lm(DV~M))[2], IV=Biv, M=Bm, DV = Bdv)
+	
+	ab.estimate=mean(indirects)
+	lower.limit=round(alpha*B/2)
+	upper.limit=round(B-lower.limit)
+	indirects=sort(indirects)
+	CI.Low = indirects[lower.limit] 
+	CI.High = indirects[upper.limit]
+	SE = sd(indirects)
+
+	#Fits from Baron and Kenny (1986) Triangle
+	
+	Fit1 = summary(lm(x[,dv]~x[,iv]))
+	Fit2 = summary(lm(x[,m]~x[,iv]))
+	Fit3 = summary(lm(x[,dv]~x[,m]))
+	Fit4 = summary(lm(x[,dv]~x[,iv]+x[,m]))
+	
+	#Fits=list(DVonIV=Fit1, MonIV=Fit2, DVonM = Fit3, DVonXplusM=Fit4)
+	
+	boot.table=t(matrix(c(ab.estimate, SE, CI.Low, CI.High)))
+	colnames(boot.table) = c("Estimate", "Std. Error", "CI Low", "CI High")
+	rownames(boot.table)="ab"
+	
+	output=list(DVonIV=Fit1, MonIV=Fit2, DVonM = Fit3, DVonXplusM=Fit4, BootstrapResults = boot.table)
+	return(output)
+	
+}
+
