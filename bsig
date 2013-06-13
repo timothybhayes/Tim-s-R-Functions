@@ -1,0 +1,27 @@
+bsig=function(x, y){
+  cl=match.call()
+	x=cbind(1, x)
+	coefficients=solve(t(x)%*%x)%*%(t(x)%*%y)
+	rownames(coefficients)[1]="Intercept"
+	ssres=(t(y)%*%y) - (t(matrix(coefficients))%*%t(x)%*%y)
+	sst=t(y)%*%matrix(y)-sum(y)^2/length(y)
+	ssr=sst-ssres
+	rsquare=ssr/sst
+	dfr=ncol(x)-1
+	dfres=nrow(x)-dfr-1
+	Fstat=(ssr/dfr)/(ssres/dfres) #Fstat
+	F.pval=pf(Fstat, dfr, dfres, lower.tail=F)
+	msres=ssres/(nrow(x)-ncol(x))
+	covb=as.vector(msres)*solve(t(x)%*%x)
+	SEs=sqrt(diag(covb))
+	ts=coefficients/SEs
+	t.pvals=2*pt(-abs(ts), nrow(mat)-1)
+	sig=ifelse(t.pvals < .001, "**", ifelse(t.pvals<.01, "*", "")) 
+	boutput=data.frame(Estimates=round(coefficients, 3), Std.Error=round(matrix(SEs),3), t.value=round(ts, 3), pval=round(t.pvals, 3))
+	boutput=data.frame(cbind(boutput, sig))
+	colnames(boutput)[ncol(boutput)]=""
+	modeloutput=data.frame(Rsquare=rsquare, Fmodel=Fstat, df1=dfr, df2=dfres, p=round(F.pval, 4))
+	boutput=apply(boutput[,1:(ncol(boutput)-1)], 2, function(x) as.numeric(x))
+	output=list(Call=cl, Model=modeloutput, coefficients=boutput)
+	return(output)
+}
