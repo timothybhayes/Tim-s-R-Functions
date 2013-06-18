@@ -1,8 +1,11 @@
 #Xiao's non-formula method
 
 bcoef=function(x, y){
-x=cbind(1, x)
-coefficients=t(solve(t(x)%*%x)%*%(t(x)%*%y))
-rownames(coefficients)="coefficients"
-return(coefficients)
+  data=as.matrix(cbind(y, x))
+	data=na.omit(data)
+	x=as.matrix(cbind(1, data[,-1]))
+	y=as.matrix(data[,1])
+	coefficients=t(solve(t(x)%*%x)%*%(t(x)%*%y))
+	rownames(coefficients)="coefficients"
+	return(coefficients)
 }
