@@ -1,28 +1,31 @@
-IndirectBoot.Revised3 = function(iv, m, dv, data, nboot=500, alpha=.05){
-    set.seed(06112013)    
-    x=data[,c(iv, m, dv)]
-    x=apply(x, 2, scale) #z-score center variables
-    B=nboot
-    nr=nrow(x)    
-    Biv=data.frame(matrix(sample(x[,iv], nr*B, T), nrow=nr, ncol=B))
-    Bm=data.frame(matrix(sample(x[,m], nr*B, T), nrow=nr, ncol=B))
-    Bdv=data.frame(matrix(sample(x[,dv], nr*B, T), nrow=nr, ncol=B))
-    indirects=mapply(function(y, x, m) bcoef(x, m)[2]*bcoef(m, y)[2], y=Bdv, x=Biv, m=Bm)    
-    ab.estimate=mean(indirects)
-    lower.limit=round(alpha*B/2)
-    upper.limit=round(B-lower.limit)
-    indirects=sort(indirects)
-    CI.Low = indirects[lower.limit] 
-    CI.High = indirects[upper.limit]
-    SE = sd(indirects)
-    Fit1 = summary(lm(x[,dv]~x[,iv]))
-    Fit2 = summary(lm(x[,m]~x[,iv]))
-    Fit3 = summary(lm(x[,dv]~x[,m]))
-    Fit4 = summary(lm(x[,dv]~x[,iv]+x[,m]))    
-    boot.table=t(matrix(c(ab.estimate, SE, CI.Low, CI.High)))
-    colnames(boot.table) = c("Estimate", "Std. Error", "CI Low", "CI High")
-    rownames(boot.table)="ab" 
-    output=list(DVonIV=Fit1, MonIV=Fit2, DVonM = Fit3, DVonXplusM=Fit4, BootstrapResults = boot.table)
-    return(output)  
+IndirectBoot.Revised3 = function(iv, m, dv, data, nboot=500, alpha=.05, stand=T){
+    set.seed(06112013)    
+    x=data[,c(iv, m, dv)]
+    if(stand) x=apply(x, 2, scale) #z-score center variables
+    B=nboot
+    nr=nrow(x)
+    
+	sam=x[sample(1:nr, B, T),]
+	    
+    Biv=data.frame(matrix(sam[,iv], nrow=nr, ncol=B))
+	Bm=data.frame(matrix(sam[,m], nrow=nr, ncol=B))
+	Bdv=data.frame(matrix(sam[,dv], nrow=nr, ncol=B))
+    
+	indirects=mapply(function(y, x, m) bcoef(x, m)[2]*bcoef(m, y)[2], y=Bdv, x=Biv, m=Bm)    
+    ab.estimate=mean(indirects)
+    lower.limit=round(alpha*B/2)
+    upper.limit=round(B-lower.limit)
+    indirects=sort(indirects)
+    CI.Low = indirects[lower.limit] 
+    CI.High = indirects[upper.limit]
+    SE = sd(indirects)
+    Fit1 = summary(lm(x[,dv]~x[,iv]))
+    Fit2 = summary(lm(x[,m]~x[,iv]))
+    Fit3 = summary(lm(x[,dv]~x[,m]))
+    Fit4 = summary(lm(x[,dv]~x[,iv]+x[,m]))    
+    boot.table=t(matrix(c(ab.estimate, SE, CI.Low, CI.High)))
+    colnames(boot.table) = c("Estimate", "Std. Error", "CI Low", "CI High")
+    rownames(boot.table)="ab" 
+    output=list(DVonIV=Fit1, MonIV=Fit2, DVonM = Fit3, DVonXplusM=Fit4, BootstrapResults = boot.table)
+    return(output)  
 }
-
