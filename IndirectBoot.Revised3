@@ -1,7 +1,7 @@
 IndirectBoot.Revised3 = function(iv, m, dv, data, nboot=500, alpha=.05){
     set.seed(06112013)    
     x=data[,c(iv, m, dv)]
-    x=apply(data, 2, scale) #z-score center variables
+    x=apply(x, 2, scale) #z-score center variables
     B=nboot
     nr=nrow(x)    
     Biv=data.frame(matrix(sample(x[,iv], nr*B, T), nrow=nr, ncol=B))
