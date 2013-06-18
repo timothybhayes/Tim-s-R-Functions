@@ -1,5 +1,6 @@
+
 IndirectBoot = function(iv, m, dv, data, nboot=500, alpha=.05){
-  #Function for computing bootstrap estimates of indirect effect for simple mediation
+	#Function for computing bootstrap estimates of indirect effect for simple mediation
 	#This function assumes that each variable name is entered as a name in quotes.
 	#so, if your iv name is "x" then "x" goes in the iv slot.
 	
@@ -16,13 +17,13 @@ IndirectBoot = function(iv, m, dv, data, nboot=500, alpha=.05){
 	
 	x=data[,c(iv, m, dv)]
 	
-	x=apply(data, 2, scale)
+	#x=apply(x, 2, scale)
 	
 	B = nboot
 	nr=nrow(x)
 	indirects=vector(length=B)
 	for(i in 1:B){
-		s=apply(x, 2, function(x) sample(x, nr, T)) #sample
+		s=x[sample(1:nr, nr, T),] #sample
 		a=coef(lm(s[,m]~s[,iv]))[2]
 		b=coef(lm(s[,dv]~s[,m]))[2]
 		indirects[i]=a*b
