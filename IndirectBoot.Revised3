@@ -4,7 +4,7 @@ IndirectBoot.Revised3 = function(iv, m, dv, data, nboot=500, alpha=.05, stand=T)
     if(stand) x=apply(x, 2, scale) #z-score center variables
     B=nboot
     nr=nrow(x)
-    sam=x[sample(1:nr, B, T),]
+    sam=x[sample(1:nr, nr*B, T),]
     
     Biv=data.frame(matrix(sam[,iv], nrow=nr, ncol=B))
     Bm=data.frame(matrix(sam[,m], nrow=nr, ncol=B))
