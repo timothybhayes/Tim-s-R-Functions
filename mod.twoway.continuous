@@ -1,0 +1,59 @@
+mod.twoway.continuous = function(x, m, y, data, xhi = mean(x, na.rm=T)+sd(x, na.rm=T), xmod = mean(x, na.rm=T), xlo = mean(x, na.rm=T)-sd(x, na.rm=T), mhi = mean(m, na.rm=T)+sd(m, na.rm=T), mmod = mean(m, na.rm=T), mlo  = mean(m, na.rm=T)-sd(m, na.rm=T), center=T, scale=T){
+  
+	#BASIC STARTING FUNCTION FOR MODERATION AMONG TWO CONTINUOUS VARIABLES
+	#No covariates (yet).
+	#NOTE: requires bsig and bcov, both of which deal with missing data.
+	#Hence, I did not build missing data action into this function explicitly.
+	
+	d = data[, c(x, m, y)]
+	
+	cnd=colnames(d)[-ncol(d)]
+	x = data[,x]
+	if(center | scale)x= scale(x, center=center, scale=scale)
+	m = data[,m]
+	y = data[,y]
+	xm = x*m
+	xvars = cbind(x, m, xm)
+	colnames(xvars) = c(cnd, paste(cnd, collapse="X"))
+	fit = bsig(xvars, y)
+	
+	coef = fit$coefficients[,1]
+	names(coef) = c("Intercept", colnames(xvars))
+	coef1=coef[-1]
+	
+	cov.b = bcov(xvars, y)[-1,-1] #No Intercept
+	
+	bvec=coef1[c(1,3)]
+	
+	mmat=cbind(1, c(mhi, mmod, mlo))
+	estimates=mmat%*%matrix(bvec)
+	rownames(estimates) = c("hi", "mod", "low")
+	wlo = rbind(1, 0, mlo)
+	wmod = rbind(1, 0, mmod)
+	whi = rbind(1, 0, mhi)
+
+	sqsehi = t(whi)%*%cov.b%*%whi
+	sqsemod = t(wmod)%*%cov.b%*%wmod
+	sqselo = t(wlo)%*%cov.b%*%wlo
+
+	sehi=sqrt(sqsehi)
+	semod=sqrt(sqsemod)
+	selo=sqrt(sqselo)
+	
+	SEs=rbind(sehi, semod, selo)
+	
+	tvals=estimates/SEs
+	
+	n=nrow(d)
+	k=ncol(xvars)
+	df=n-k-1
+	pvals=apply(tvals, 2, function(x) x=2*pt(abs(x), df, lower.tail=F))
+	sig=ifelse(pvals < .001, "***", ifelse(pvals<.01, "**", ifelse(pvals <.05, "*", ""))) 
+	
+	SimpleSlopes = data.frame(round(estimates, 4), round(SEs, 4), round(tvals, 4), round(rep(df, nrow(estimates)), 4), round(pvals, 4), sig)
+	colnames(SimpleSlopes) = c("Estimate", "Std.Error", "t", "df", "p", "")
+	output=fit
+	output$SimpleSlopes=SimpleSlopes
+	output$Legend = "Simple slope of X on Y at High, Moderate, and Low values of M."
+	return(output)
+}
