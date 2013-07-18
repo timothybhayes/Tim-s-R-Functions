@@ -1,17 +1,25 @@
 mod.twoway.continuous = function(x, m, y, data, xhi = mean(x, na.rm=T)+sd(x, na.rm=T), xmod = mean(x, na.rm=T), xlo = mean(x, na.rm=T)-sd(x, na.rm=T), mhi = mean(m, na.rm=T)+sd(m, na.rm=T), mmod = mean(m, na.rm=T), mlo  = mean(m, na.rm=T)-sd(m, na.rm=T), center=T, scale=T){
-  
+	
 	#BASIC STARTING FUNCTION FOR MODERATION AMONG TWO CONTINUOUS VARIABLES
 	#No covariates (yet).
-	#NOTE: requires bsig and bcov, both of which deal with missing data.
-	#Hence, I did not build missing data action into this function explicitly.
+	#NOTE: requires bsig and bcov.
 	
 	d = data[, c(x, m, y)]
+	d=na.omit(d)
 	
 	cnd=colnames(d)[-ncol(d)]
-	x = data[,x]
-	if(center | scale)x= scale(x, center=center, scale=scale)
-	m = data[,m]
-	y = data[,y]
+	
+	x = d[,x]
+	if(length(unique(x))!=2){
+		if(center | scale)x = scale(x, center=center, scale=scale)
+		}
+
+	m = d[,m]
+	if(length(unique(m))!=2){
+		if(center | scale)m = scale(m, center=center, scale=scale)
+		}	
+	
+	y = d[,y]
 	xm = x*m
 	xvars = cbind(x, m, xm)
 	colnames(xvars) = c(cnd, paste(cnd, collapse="X"))
@@ -25,12 +33,14 @@ mod.twoway.continuous = function(x, m, y, data, xhi = mean(x, na.rm=T)+sd(x, na.
 	
 	bvec=coef1[c(1,3)]
 	
+	if(length(unique(m))!=2){
 	mmat=cbind(1, c(mhi, mmod, mlo))
 	estimates=mmat%*%matrix(bvec)
 	rownames(estimates) = c("hi", "mod", "low")
-	wlo = rbind(1, 0, mlo)
-	wmod = rbind(1, 0, mmod)
+
 	whi = rbind(1, 0, mhi)
+	wmod = rbind(1, 0, mmod)
+	wlo = rbind(1, 0, mlo)
 
 	sqsehi = t(whi)%*%cov.b%*%whi
 	sqsemod = t(wmod)%*%cov.b%*%wmod
@@ -41,6 +51,30 @@ mod.twoway.continuous = function(x, m, y, data, xhi = mean(x, na.rm=T)+sd(x, na.
 	selo=sqrt(sqselo)
 	
 	SEs=rbind(sehi, semod, selo)
+	
+	}else if(length(unique(m))==2){
+	
+	mlevs=sort(unique(m), decreasing=T)
+	mhi=mlevs[1]
+	mlo=mlevs[2]
+	
+	mmat=cbind(1, c(mhi, mlo))
+	estimates=mmat%*%matrix(bvec)
+	rownames(estimates) = c("hi", "low")
+
+	whi = rbind(1, 0, mhi)
+	wlo = rbind(1, 0, mlo)
+
+	sqsehi = t(whi)%*%cov.b%*%whi
+	sqselo = t(wlo)%*%cov.b%*%wlo
+
+	sehi=sqrt(sqsehi)
+	selo=sqrt(sqselo)
+	
+	SEs=rbind(sehi, selo)
+	}
+	
+
 	
 	tvals=estimates/SEs
 	
