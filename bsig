@@ -34,12 +34,12 @@ bsig=function(x, y, data = NULL){
 	SEs=sqrt(diag(covb))
 	ts=coefficients/SEs
 	t.pvals=2*pt(-abs(ts), dfres)
-	sig=ifelse(t.pvals < .001, "**", ifelse(t.pvals<.01, "*", "")) 
-	boutput=data.frame(Estimates=round(coefficients, 4), Std.Error=round(matrix(SEs),4), t.value=round(ts, 3), pval=round(t.pvals, 3))
-	boutput=data.frame(cbind(boutput, sig))
+	sig=ifelse(t.pvals < .001, "***", ifelse(t.pvals<.01, "**", ifelse(t.pvals <.05, "*",""))) 
+	boutput=data.frame(round(coefficients, 4), round(matrix(SEs),4), round(ts, 3), round(t.pvals, 4), sig)
+	colnames(boutput)=c("Estimate", "Std.Error", "t", "p", "")
 	rownames(boutput) = rownames(coefficients)
 	modeloutput=data.frame(Rsquare=round(rsquare, 5), Fmodel=round(Fstat, 4), df1=dfr, df2=dfres, p=round(F.pval, 4))
-	boutput=apply(boutput[,1:(ncol(boutput)-1)], 2, function(x) as.numeric(x))
+	rownames(modeloutput)="Estimate"
 	if(!is.null(rownames(coefficients)))rownames(boutput) = rownames(coefficients)
 	output=list(Call=cl, Model=modeloutput, coefficients=boutput)
 	return(output)
