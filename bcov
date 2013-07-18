@@ -1,0 +1,30 @@
+bcov = function(x, y, data=NULL){
+  #Compute Variance-Covariance Matrix of B coefficients
+	if(!is.null(data)){
+		d = data[,c(x,y)]
+		d = na.omit(d)
+		x = d[,x]
+		y = d[,y]	
+		}else{
+			x=as.matrix(x)
+			nc=ncol(x)
+			d = cbind(x, y)
+			d = na.omit(d)
+			x = d[,1:nc]
+			y = d[,ncol(d)]
+	}
+	x=cbind(1, x)
+	x=as.matrix(x)
+	if(!is.null(data)) {
+		colnames(x)[1]="Intercept"
+		colnames(x)[2:ncol(x)] = colnames(d)[-ncol(d)]
+	}
+	coefficients=solve(t(x)%*%x)%*%(t(x)%*%y)
+	if(!is.null(colnames(x))) rownames(coefficients) = colnames(x)
+	ssres=(t(y)%*%y) - (t(matrix(coefficients))%*%t(x)%*%y)
+	msres=ssres/(nrow(x)-ncol(x))
+	covb=as.vector(msres)*solve(t(x)%*%x)
+	if(!is.null(rownames(coefficients))) colnames(covb)=rownames(coefficients)
+	if(!is.null(rownames(coefficients)))rownames(covb)=rownames(coefficients)
+	return(covb)
+}
