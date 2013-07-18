@@ -1,8 +1,26 @@
-bsig=function(x, y){
+bsig=function(x, y, data = NULL){
 	cl=match.call()
+	if(!is.null(data)){
+		d = data[,c(x,y)]
+		d = na.omit(d)
+		x = d[,x]
+		y = d[,y]
+	}else{
+		x=as.matrix(x)
+		nc=ncol(x)
+		d = cbind(x, y)
+		d = na.omit(d)
+		x = d[,1:nc]
+		y = d[,ncol(d)]
+	}
 	x=cbind(1, x)
+	x=as.matrix(x)
+	if(!is.null(data)) {
+		colnames(x)[1]="Intercept"
+		colnames(x)[2:ncol(x)] = colnames(d)[-ncol(d)]
+	}
 	coefficients=solve(t(x)%*%x)%*%(t(x)%*%y)
-	rownames(coefficients)[1]="Intercept"
+	if(!is.null(colnames(x))) rownames(coefficients) = colnames(x)
 	ssres=(t(y)%*%y) - (t(matrix(coefficients))%*%t(x)%*%y)
 	sst=t(y)%*%matrix(y)-sum(y)^2/length(y)
 	ssr=sst-ssres
@@ -19,9 +37,10 @@ bsig=function(x, y){
 	sig=ifelse(t.pvals < .001, "**", ifelse(t.pvals<.01, "*", "")) 
 	boutput=data.frame(Estimates=round(coefficients, 4), Std.Error=round(matrix(SEs),4), t.value=round(ts, 3), pval=round(t.pvals, 3))
 	boutput=data.frame(cbind(boutput, sig))
-	colnames(boutput)[ncol(boutput)]=""
+	rownames(boutput) = rownames(coefficients)
 	modeloutput=data.frame(Rsquare=round(rsquare, 5), Fmodel=round(Fstat, 4), df1=dfr, df2=dfres, p=round(F.pval, 4))
 	boutput=apply(boutput[,1:(ncol(boutput)-1)], 2, function(x) as.numeric(x))
+	if(!is.null(rownames(coefficients)))rownames(boutput) = rownames(coefficients)
 	output=list(Call=cl, Model=modeloutput, coefficients=boutput)
 	return(output)
 }
