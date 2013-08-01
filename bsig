@@ -41,7 +41,7 @@ bsig=function(x, y, data = NULL){
 	boutput=data.frame(round(coefficients, 4), round(matrix(SEs),4), round(ts, 3), round(t.pvals, 4), sig)
 	colnames(boutput)=c("Estimate", "Std.Error", "t", "p", "")
 	rownames(boutput) = rownames(coefficients)
-	modeloutput=data.frame(Rsquare=round(rsquare, 5), Adj.Rsquare=round(adjrsqr, 5), Fmodel=round(Fstat, 4), df1=dfr, df2=dfres, p=round(F.pval, 4))
+	modeloutput=data.frame(Rsquare=round(rsquare, 4), Adj.Rsquare=round(adjrsqr, 3), Fmodel=round(Fstat, 4), df1=dfr, df2=dfres, p=round(F.pval, 4))
 	rownames(modeloutput)="Estimate"
 	if(!is.null(rownames(coefficients)))rownames(boutput) = rownames(coefficients)
 	output=list(Call=cl, Model=modeloutput, coefficients=boutput)
